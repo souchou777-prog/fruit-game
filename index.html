@@ -149,7 +149,7 @@ const LEVELS=[
   {spawnMs:380, fallSec:1.2,badRate:.24},
   {spawnMs:300, fallSec:1.0,badRate:.26},
 ];
-const LV_THR=[0,225,600,1200,2100,3300,4800,6750];
+const LV_THR=[0,150,400,800,1400,2200,3200,4500];
 const BASKET_HW=55, ITEM_SIZE=50;
 const MAX_RANK=5;
 
@@ -417,9 +417,9 @@ function skipName(){
 function showResult(){
   hideAll();
   let rank='';
-  if(score>=4800)rank='🏆 チャンピオン！すごすぎる！';
-  else if(score>=2100)rank='🥇 やったね！めちゃ上手！';
-  else if(score>=600)rank='🥈 よくできました！';
+  if(score>=3200)rank='🏆 チャンピオン！すごすぎる！';
+  else if(score>=1400)rank='🥇 やったね！めちゃ上手！';
+  else if(score>=400)rank='🥈 よくできました！';
   else rank='🥉 もういちどがんばろう！';
   document.getElementById('result-score').textContent=score+'てん';
   document.getElementById('result-rank').textContent=rank;
