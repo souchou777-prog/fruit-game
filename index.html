@@ -28,6 +28,15 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:linear-gradient(160deg,
 @keyframes fxUp{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(-65px) scale(1.3);}}
 #lvbanner{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%) scale(0);background:linear-gradient(135deg,#ab47bc,#7b1fa2);color:white;border-radius:20px;padding:16px 40px;font-size:2.2rem;font-weight:900;z-index:30;pointer-events:none;opacity:0;box-shadow:0 8px 28px rgba(171,71,188,.5);white-space:nowrap;}
 #lvbanner.show{animation:bannerPop 1.2s ease forwards;}
+/* ライフアップ全画面演出 */
+#lifeup-overlay{position:absolute;inset:0;z-index:40;pointer-events:none;display:none;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(255,235,59,.55) 0%,rgba(255,182,193,.35) 55%,rgba(255,255,255,0) 80%);}
+#lifeup-overlay.show{display:flex;animation:lifeupBgFade 1.4s ease forwards;}
+@keyframes lifeupBgFade{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+#lifeup-text{font-size:3rem;font-weight:900;color:#e91e63;text-shadow:3px 3px 0 #fff,0 0 24px rgba(255,255,255,.8);transform:scale(0);white-space:nowrap;}
+#lifeup-overlay.show #lifeup-text{animation:lifeupTextPop 1.4s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes lifeupTextPop{0%{transform:scale(0) rotate(-8deg)}30%{transform:scale(1.25) rotate(4deg)}50%{transform:scale(1) rotate(0deg)}80%{transform:scale(1) rotate(0deg)}100%{transform:scale(.85) rotate(0deg);opacity:0}}
+.heart-burst{position:absolute;font-size:2.2rem;animation:heartFly 1.3s ease-out forwards;}
+@keyframes heartFly{0%{transform:translate(0,0) scale(.5) rotate(0deg);opacity:1}100%{transform:translate(var(--hx),var(--hy)) scale(1.3) rotate(var(--hr));opacity:0}}
 @keyframes bannerPop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}20%{transform:translate(-50%,-50%) scale(1.1);opacity:1}70%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(.8);opacity:0}}
 #ground{position:absolute;bottom:0;left:0;right:0;height:55px;background:linear-gradient(to bottom,#a5d6a7,#81c784);border-radius:50% 50% 0 0/18px 18px 0 0;z-index:5;}
 .screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,249,196,.95);z-index:50;gap:16px;padding:20px;}
@@ -83,6 +92,7 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:linear-gradient(160deg,
   </div>
 
   <div id="lvbanner"></div>
+  <div id="lifeup-overlay"><div id="lifeup-text">💖 ライフアップ！ 💖</div></div>
   <div id="basket">🧺</div>
   <div id="ground"></div>
   <div id="hint">← → キー または マウス・タッチで うごかそう！</div>
@@ -149,11 +159,11 @@ const LEVELS=[
   {spawnMs:380, fallSec:1.2,badRate:.24},
   {spawnMs:300, fallSec:1.0,badRate:.26},
 ];
-const LV_THR=[0,150,400,800,1400,2200,3200,4500];
+const LV_THR=[0,400,900,1600,2600,3900,5500,7500];
 const BASKET_HW=55, ITEM_SIZE=50;
 const MAX_RANK=5;
 
-let score=0,lives=5,lv=1,combo=0;
+let score=0,lives=5,lv=1,combo=0,nextLifeAt=7500;
 let bx=50,running=false;
 let items=[],spawnTimer=null,rafId=null,lastTime=0;
 
@@ -267,7 +277,7 @@ function renderRanking(list){
 // ── ゲーム ──
 function startGame(){
   hideAll();
-  score=0;lives=5;lv=1;bx=50;items=[];running=true;combo=0;
+  score=0;lives=5;lv=1;bx=50;items=[];running=true;combo=0;nextLifeAt=7500;
   updateHUD();
   gc.querySelectorAll('.item,.fx').forEach(e=>e.remove());
   clearInterval(spawnTimer);cancelAnimationFrame(rafId);
@@ -338,21 +348,63 @@ function loop(now){
 function onCatch(x,y,ch){
   combo++;
   const pts=combo*10;
-  score+=pts;updateHUD();checkLvUp();playCatch();
+  score+=pts;updateHUD();checkLvUp();checkLifeRecover(x,y);playCatch();
   const comboText = combo>1 ? `+${pts} ${ch} (${combo}連続!)` : `+${pts} ${ch}`;
   showFx(x,y,comboText,'good');
   basketEl.style.transform='translateX(-50%) scale(1.25)';
   setTimeout(()=>basketEl.style.transform='translateX(-50%) scale(1)',150);
 }
+function checkLifeRecover(x,y){
+  if(score>=nextLifeAt){
+    nextLifeAt+=7500;
+    if(lives<5){
+      lives++;
+      updateHUD();
+      setTimeout(()=>showFx(x,y-40,'❤️ かいふく！','good'),200);
+      triggerLifeUp();
+    }
+  }
+}
+function triggerLifeUp(){
+  const overlay=document.getElementById('lifeup-overlay');
+  overlay.classList.remove('show');
+  void overlay.offsetWidth;
+  overlay.classList.add('show');
+  setTimeout(()=>overlay.classList.remove('show'),1400);
+
+  // ハートが画面いっぱいに飛び散る
+  const W=gc.offsetWidth,H=gc.offsetHeight;
+  const cx=W/2, cy=H/2;
+  for(let i=0;i<14;i++){
+    const h=document.createElement('div');
+    h.className='heart-burst';
+    h.textContent=['💖','💗','❤️','💕'][Math.floor(Math.random()*4)];
+    const angle=(Math.PI*2*i)/14 + Math.random()*0.3;
+    const dist=120+Math.random()*180;
+    h.style.left=cx+'px';
+    h.style.top=cy+'px';
+    h.style.setProperty('--hx',(Math.cos(angle)*dist)+'px');
+    h.style.setProperty('--hy',(Math.sin(angle)*dist)+'px');
+    h.style.setProperty('--hr',(Math.random()*360-180)+'deg');
+    h.style.zIndex=41;
+    gc.appendChild(h);
+    setTimeout(()=>h.remove(),1350);
+  }
+
+  // 効果音（華やかなアルペジオ）
+  [659,784,988,1318].forEach((f,i)=>{
+    setTimeout(()=>beep(f,f*1.2,.25,'sine',.3),i*90);
+  });
+}
 function onBadCatch(x,y){
-  lives--;updateHUD();playMiss();
+  lives=Math.max(0,lives-1);updateHUD();playMiss();
   combo=0;updateHUD();
   showFx(x,y,'💥 アウト！','bad');
   flashRed();
   if(lives<=0)setTimeout(endGame,300);
 }
 function onDrop(x,y){
-  lives--;updateHUD();playDrop();
+  lives=Math.max(0,lives-1);updateHUD();playDrop();
   combo=0;updateHUD();
   showFx(x,y,'🍂 おとした！','bad');
   flashRed();
@@ -364,7 +416,7 @@ function flashRed(){
 }
 function updateHUD(){
   scoreEl.textContent=score;levelEl.textContent=lv;
-  livesEl.textContent='❤️'.repeat(lives)+'🖤'.repeat(Math.max(0,5-lives));
+  livesEl.textContent='❤️'.repeat(Math.max(0,lives))+'🖤'.repeat(Math.max(0,5-lives));
   const comboBox=document.getElementById('combo-box');
   const comboEl=document.getElementById('combo');
   if(combo>=2){
@@ -417,9 +469,9 @@ function skipName(){
 function showResult(){
   hideAll();
   let rank='';
-  if(score>=3200)rank='🏆 チャンピオン！すごすぎる！';
-  else if(score>=1400)rank='🥇 やったね！めちゃ上手！';
-  else if(score>=400)rank='🥈 よくできました！';
+  if(score>=5500)rank='🏆 チャンピオン！すごすぎる！';
+  else if(score>=2600)rank='🥇 やったね！めちゃ上手！';
+  else if(score>=900)rank='🥈 よくできました！';
   else rank='🥉 もういちどがんばろう！';
   document.getElementById('result-score').textContent=score+'てん';
   document.getElementById('result-rank').textContent=rank;
