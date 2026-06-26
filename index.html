@@ -163,7 +163,7 @@ const LV_THR=[0,400,900,1600,2600,3900,5500,7500];
 const BASKET_HW=55, ITEM_SIZE=50;
 const MAX_RANK=5;
 
-let score=0,lives=5,lv=1,combo=0,nextLifeAt=7500;
+let score=0,lives=5,lv=1,combo=0,nextLifeAt=3000;
 let bx=50,running=false;
 let items=[],spawnTimer=null,rafId=null,lastTime=0;
 
@@ -277,7 +277,7 @@ function renderRanking(list){
 // ── ゲーム ──
 function startGame(){
   hideAll();
-  score=0;lives=5;lv=1;bx=50;items=[];running=true;combo=0;nextLifeAt=7500;
+  score=0;lives=5;lv=1;bx=50;items=[];running=true;combo=0;nextLifeAt=3000;
   updateHUD();
   gc.querySelectorAll('.item,.fx').forEach(e=>e.remove());
   clearInterval(spawnTimer);cancelAnimationFrame(rafId);
@@ -346,17 +346,17 @@ function loop(now){
 }
 
 function onCatch(x,y,ch){
-  combo++;
+  combo=Math.min(combo+1,10);
   const pts=combo*10;
   score+=pts;updateHUD();checkLvUp();checkLifeRecover(x,y);playCatch();
-  const comboText = combo>1 ? `+${pts} ${ch} (${combo}連続!)` : `+${pts} ${ch}`;
+  const comboText = combo>=10 ? `+${pts} ${ch} (MAX!10連続!)` : combo>1 ? `+${pts} ${ch} (${combo}連続!)` : `+${pts} ${ch}`;
   showFx(x,y,comboText,'good');
   basketEl.style.transform='translateX(-50%) scale(1.25)';
   setTimeout(()=>basketEl.style.transform='translateX(-50%) scale(1)',150);
 }
 function checkLifeRecover(x,y){
   if(score>=nextLifeAt){
-    nextLifeAt+=7500;
+    nextLifeAt+=3000;
     if(lives<5){
       lives++;
       updateHUD();
