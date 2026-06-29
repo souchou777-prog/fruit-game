@@ -563,6 +563,19 @@ gc.addEventListener('touchmove',e=>{
   bx=Math.max(3,Math.min(97,((e.touches[0].clientX-r.left)/r.width)*100));
   basketEl.style.left=bx+'%';
 },{passive:false});
+
+// ── バックグラウンド対策：最小化・タブ切替時に自動ポーズ ──
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && running && !paused) {
+    pauseGame();
+  }
+});
+window.addEventListener('pagehide', () => {
+  if (running && !paused) pauseGame();
+});
+window.addEventListener('blur', () => {
+  if (running && !paused) pauseGame();
+});
 </script>
 <script>
 // PWA: Service Worker登録（オフライン対応・ホーム画面追加対応）
