@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>くだものキャッチ！</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="theme-color" content="#ff7043">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>フルーツドロップ</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -99,7 +106,7 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:linear-gradient(160deg,
 
   <!-- スタート -->
   <div class="screen" id="start-screen">
-    <div class="screen-title">🍎くだもの<br>キャッチ！🍊</div>
+    <div class="screen-title">🍎フルーツ<br>ドロップ🍊</div>
     <div class="rule-row">
       <div class="rule-card ok">
         <div class="rule-badge ok">⭕ OK！</div>
@@ -159,11 +166,11 @@ const LEVELS=[
   {spawnMs:380, fallSec:1.2,badRate:.24},
   {spawnMs:300, fallSec:1.0,badRate:.26},
 ];
-const LV_THR=[0,400,900,1600,2600,3900,5500,7500];
+const LV_GAP=[400,500,700,1000,1300,1600,2000]; // 各レベルアップに必要な「そこからの加算点数」
 const BASKET_HW=55, ITEM_SIZE=50;
 const MAX_RANK=5;
 
-let score=0,lives=5,lv=1,combo=0,nextLifeAt=3000;
+let score=0,lives=5,lv=1,combo=0,nextLifeAt=3000,lvProgress=0;
 let bx=50,running=false;
 let items=[],spawnTimer=null,rafId=null,lastTime=0;
 
@@ -277,7 +284,7 @@ function renderRanking(list){
 // ── ゲーム ──
 function startGame(){
   hideAll();
-  score=0;lives=5;lv=1;bx=50;items=[];running=true;combo=0;nextLifeAt=3000;
+  score=0;lives=5;lv=1;bx=50;items=[];running=true;combo=0;nextLifeAt=3000;lvProgress=0;
   updateHUD();
   gc.querySelectorAll('.item,.fx').forEach(e=>e.remove());
   clearInterval(spawnTimer);cancelAnimationFrame(rafId);
@@ -348,7 +355,7 @@ function loop(now){
 function onCatch(x,y,ch){
   combo=Math.min(combo+1,10);
   const pts=combo*10;
-  score+=pts;updateHUD();checkLvUp();checkLifeRecover(x,y);playCatch();
+  score+=pts;updateHUD();checkLvUp(pts);checkLifeRecover(x,y);playCatch();
   const comboText = combo>=10 ? `+${pts} ${ch} (MAX!10連続!)` : combo>1 ? `+${pts} ${ch} (${combo}連続!)` : `+${pts} ${ch}`;
   showFx(x,y,comboText,'good');
   basketEl.style.transform='translateX(-50%) scale(1.25)';
@@ -401,6 +408,7 @@ function onBadCatch(x,y){
   combo=0;updateHUD();
   showFx(x,y,'💥 アウト！','bad');
   flashRed();
+  levelDown();
   if(lives<=0)setTimeout(endGame,300);
 }
 function onDrop(x,y){
@@ -408,7 +416,25 @@ function onDrop(x,y){
   combo=0;updateHUD();
   showFx(x,y,'🍂 おとした！','bad');
   flashRed();
+  levelDown();
   if(lives<=0)setTimeout(endGame,300);
+}
+function levelDown(){
+  if(lv>1){
+    lv=Math.max(1,lv-1);
+    lvProgress=0; // 内部スコアを0にリセット
+    levelEl.textContent=lv;
+    startSpawn(); // 落下速度・出現頻度を更新
+    lvbanner.textContent='⬇️ レベルダウン…';
+    lvbanner.style.background='linear-gradient(135deg,#90a4ae,#546e7a)';
+    lvbanner.classList.remove('show');
+    void lvbanner.offsetWidth;
+    lvbanner.classList.add('show');
+    setTimeout(()=>{
+      lvbanner.classList.remove('show');
+      lvbanner.style.background='linear-gradient(135deg,#ab47bc,#7b1fa2)'; // 元の色に戻す
+    },1300);
+  }
 }
 function flashRed(){
   gc.style.filter='brightness(1.9)';
@@ -429,17 +455,21 @@ function updateHUD(){
     comboBox.classList.remove('active');
   }
 }
-function checkLvUp(){
-  const next=lv+1;
-  if(next<=LEVELS.length&&score>=LV_THR[next-1]){
-    lv=next;levelBox.classList.add('up');
+function checkLvUp(pts){
+  lvProgress+=pts;
+  // 複数レベル同時アップにも対応（whileループ）
+  while(lv<LEVELS.length && lvProgress>=LV_GAP[lv-1]){
+    lvProgress-=LV_GAP[lv-1]; // 超過分は次のレベルに持ち越し
+    lv++;
+    levelBox.classList.add('up');
     setTimeout(()=>levelBox.classList.remove('up'),1200);
     lvbanner.textContent='⬆️ レベル'+lv+'！';
     lvbanner.classList.remove('show');void lvbanner.offsetWidth;
     lvbanner.classList.add('show');
     setTimeout(()=>lvbanner.classList.remove('show'),1300);
-    startSpawn();updateHUD();
+    startSpawn();
   }
+  updateHUD();
 }
 function showFx(x,y,txt,cls){
   const el=document.createElement('div');
@@ -502,6 +532,14 @@ gc.addEventListener('touchmove',e=>{
   bx=Math.max(3,Math.min(97,((e.touches[0].clientX-r.left)/r.width)*100));
   basketEl.style.left=bx+'%';
 },{passive:false});
+</script>
+<script>
+// PWA: Service Worker登録（オフライン対応・ホーム画面追加対応）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
