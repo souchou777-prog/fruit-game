@@ -581,7 +581,17 @@ window.addEventListener('blur', () => {
 // PWA: Service Worker登録（オフライン対応・ホーム画面追加対応）
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+    navigator.serviceWorker.register('./service-worker.js').then(reg => {
+      // 新しいService Workerが見つかったら自動で最新化
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated') {
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(()=>{});
   });
 }
 </script>

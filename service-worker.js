@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fruit-catch-v1';
+const CACHE_NAME = 'fruit-catch-v2'; // 更新するたびに数字を変える
 const FILES_TO_CACHE = [
   './index.html',
   './manifest.json',
@@ -22,8 +22,15 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Network First：まずネットから最新を取りに行き、ダメな時だけキャッシュを使う
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const resClone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
