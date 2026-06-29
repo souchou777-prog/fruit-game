@@ -95,6 +95,7 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:linear-gradient(160deg,
     <div id="lives-box"><span id="lives">❤️❤️❤️❤️❤️</span></div>
     <div id="level-box">🚀 Lv.<span id="level">1</span></div>
     <button class="hbtn" style="background:#66bb6a;" onclick="toggleBGM()">🔊</button>
+    <button class="hbtn" style="background:#ffa726;" onclick="pauseGame()">⏸️ ポーズ</button>
     <button class="hbtn" style="background:#78909c;" onclick="retireGame()">🏳️ やめる</button>
   </div>
 
@@ -151,6 +152,13 @@ body{font-family:'Zen Maru Gothic',sans-serif;background:linear-gradient(160deg,
     </table>
     <button class="btn" onclick="showStart()">🏠 もどる</button>
   </div>
+
+  <!-- ポーズ画面 -->
+  <div class="screen" id="pause-screen" style="display:none;background:rgba(0,0,0,.55);z-index:60;">
+    <div class="screen-title" style="font-size:2.6rem;color:white;text-shadow:3px 3px 0 #444;">⏸️ ポーズ中</div>
+    <button class="btn" onclick="resumeGame()">▶ つづける</button>
+    <button class="btn" style="background:linear-gradient(135deg,#78909c,#546e7a);font-size:1.1rem;padding:10px 30px;" onclick="quitFromPause()">🏳️ やめる</button>
+  </div>
 </div>
 
 <script>
@@ -170,7 +178,7 @@ const LV_GAP=[400,500,700,1000,1300,1600,2000]; // 各レベルアップに必�
 const BASKET_HW=55, ITEM_SIZE=50;
 const MAX_RANK=5;
 
-let score=0,lives=5,lv=1,combo=0,nextLifeAt=3000,lvProgress=0;
+let score=0,lives=5,lv=1,combo=0,nextLifeAt=3000,lvProgress=0,paused=false;
 let bx=50,running=false;
 let items=[],spawnTimer=null,rafId=null,lastTime=0;
 
@@ -255,7 +263,7 @@ function addRanking(name,sc){
 
 // ── 画面表示 ──
 function hideAll(){
-  ['start-screen','name-screen','result-screen','ranking-screen'].forEach(id=>{
+  ['start-screen','name-screen','result-screen','ranking-screen','pause-screen'].forEach(id=>{
     document.getElementById(id).style.display='none';
   });
 }
@@ -284,7 +292,7 @@ function renderRanking(list){
 // ── ゲーム ──
 function startGame(){
   hideAll();
-  score=0;lives=5;lv=1;bx=50;items=[];running=true;combo=0;nextLifeAt=3000;lvProgress=0;
+  score=0;lives=5;lv=1;bx=50;items=[];running=true;combo=0;nextLifeAt=3000;lvProgress=0;paused=false;
   updateHUD();
   gc.querySelectorAll('.item,.fx').forEach(e=>e.remove());
   clearInterval(spawnTimer);cancelAnimationFrame(rafId);
@@ -295,13 +303,35 @@ function startGame(){
   startBGM();
 }
 function retireGame(){if(running)endGame();}
+
+function pauseGame(){
+  if(!running||paused)return;
+  paused=true;
+  clearInterval(spawnTimer);
+  stopBGM();
+  document.getElementById('pause-screen').style.display='flex';
+}
+function resumeGame(){
+  if(!running||!paused)return;
+  paused=false;
+  document.getElementById('pause-screen').style.display='none';
+  startSpawn();
+  lastTime=performance.now();
+  if(actx.state==='suspended')actx.resume();
+  startBGM();
+}
+function quitFromPause(){
+  document.getElementById('pause-screen').style.display='none';
+  paused=false;
+  if(running)endGame();
+}
 function startSpawn(){
   clearInterval(spawnTimer);
   const cfg=LEVELS[Math.min(lv-1,LEVELS.length-1)];
   spawnTimer=setInterval(spawnItem,cfg.spawnMs);
 }
 function spawnItem(){
-  if(!running)return;
+  if(!running||paused)return;
   const cfg=LEVELS[Math.min(lv-1,LEVELS.length-1)];
   const isBad=Math.random()<cfg.badRate;
   const ch=isBad?BAD[Math.floor(Math.random()*BAD.length)]:FRUITS[Math.floor(Math.random()*FRUITS.length)];
@@ -318,6 +348,7 @@ function spawnItem(){
 
 function loop(now){
   if(!running){rafId=null;return;}
+  if(paused){lastTime=now;rafId=requestAnimationFrame(loop);return;}
   const dt=Math.min(now-lastTime,50);
   lastTime=now;
   const W=gc.offsetWidth,H=gc.offsetHeight;
@@ -478,7 +509,7 @@ function showFx(x,y,txt,cls){
   gc.appendChild(el);setTimeout(()=>el.remove(),850);
 }
 function endGame(){
-  running=false;clearInterval(spawnTimer);cancelAnimationFrame(rafId);
+  running=false;paused=false;clearInterval(spawnTimer);cancelAnimationFrame(rafId);
   gc.querySelectorAll('.item').forEach(e=>e.remove());
   stopBGM();
   // 名前入力画面へ
@@ -513,20 +544,20 @@ const keys={};
 document.addEventListener('keydown',e=>{keys[e.key]=true;});
 document.addEventListener('keyup',e=>{keys[e.key]=false;});
 setInterval(()=>{
-  if(!running)return;
+  if(!running||paused)return;
   const spd=2.2;
   if(keys['ArrowLeft']||keys['a']||keys['A'])bx=Math.max(3,bx-spd);
   if(keys['ArrowRight']||keys['d']||keys['D'])bx=Math.min(97,bx+spd);
   basketEl.style.left=bx+'%';
 },16);
 gc.addEventListener('mousemove',e=>{
-  if(!running)return;
+  if(!running||paused)return;
   const r=gc.getBoundingClientRect();
   bx=Math.max(3,Math.min(97,((e.clientX-r.left)/r.width)*100));
   basketEl.style.left=bx+'%';
 });
 gc.addEventListener('touchmove',e=>{
-  if(!running)return;
+  if(!running||paused)return;
   e.preventDefault();
   const r=gc.getBoundingClientRect();
   bx=Math.max(3,Math.min(97,((e.touches[0].clientX-r.left)/r.width)*100));
