@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="theme-color" content="#ff7043">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>フルーツドロップ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Zen Maru Gothic',sans-serif;background:linear-gradient(160deg,#fff9c4 0%,#ffe0b2 50%,#fce4ec 100%);overflow:hidden;user-select:none;}
+#gc{position:relative;width:100vw;height:100vh;overflow:hidden;}
+.cloud{position:absolute;background:white;border-radius:50px;opacity:.55;animation:cloudMove linear infinite;}
+@keyframes cloudMove{from{left:-200px}to{left:110vw}}
+#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(to bottom,rgba(255,255,255,.88),transparent);z-index:20;gap:6px;flex-wrap:wrap;}
+#score-box{background:#ff7043;color:white;border-radius:18px;padding:6px 16px;font-size:1.2rem;font-weight:900;box-shadow:0 4px 10px rgba(255,112,67,.4);}
+#combo-box{background:#ffca28;color:#5d4037;border-radius:18px;padding:6px 14px;font-size:1.1rem;font-weight:900;box-shadow:0 4px 10px rgba(255,202,40,.5);display:none;}
+#combo-box.active{display:inline-block;animation:comboPulse .3s;}
+@keyframes comboPulse{0%{transform:scale(1.3)}100%{transform:scale(1)}}
+#lives-box{font-size:1.3rem;letter-spacing:1px;}
+#level-box{background:#42a5f5;color:white;border-radius:18px;padding:6px 16px;font-size:1.2rem;font-weight:900;box-shadow:0 4px 10px rgba(66,165,245,.4);transition:background .3s;}
+#level-box.up{background:#ab47bc;animation:pulse .4s 3;}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.12)}}
+.hbtn{border:none;border-radius:14px;padding:6px 12px;font-size:.95rem;font-family:inherit;font-weight:900;cursor:pointer;color:white;}
+#basket{position:absolute;bottom:58px;font-size:3.8rem;transform:translateX(-50%);z-index:10;pointer-events:none;filter:drop-shadow(0 5px 6px rgba(0,0,0,.2));transition:transform .08s;}
+.item{position:absolute;font-size:2.6rem;line-height:1;pointer-events:none;z-index:8;filter:drop-shadow(0 3px 5px rgba(0,0,0,.15));}
+.fx{position:absolute;font-size:1.1rem;font-weight:900;pointer-events:none;z-index:25;animation:fxUp .8s ease-out forwards;}
+.fx.good{color:#ff6f00;}.fx.bad{color:#e53935;}
+@keyframes fxUp{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(-65px) scale(1.3);}}
+#lvbanner{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%) scale(0);background:linear-gradient(135deg,#ab47bc,#7b1fa2);color:white;border-radius:20px;padding:16px 40px;font-size:2.2rem;font-weight:900;z-index:30;pointer-events:none;opacity:0;box-shadow:0 8px 28px rgba(171,71,188,.5);white-space:nowrap;}
+#lvbanner.show{animation:bannerPop 1.2s ease forwards;}
+#lvbanner.down{background:linear-gradient(135deg,#90a4ae,#546e7a);}
+/* ライフアップ全画面演出 */
+#lifeup-overlay{position:absolute;inset:0;z-index:40;pointer-events:none;display:none;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(255,235,59,.55) 0%,rgba(255,182,193,.35) 55%,rgba(255,255,255,0) 80%);}
+#lifeup-overlay.show{display:flex;animation:lifeupBgFade 1.4s ease forwards;}
+@keyframes lifeupBgFade{0%{opacity:0}15%{opacity:1}75%{opacity:1}100%{opacity:0}}
+#lifeup-text{font-size:3rem;font-weight:900;color:#e91e63;text-shadow:3px 3px 0 #fff,0 0 24px rgba(255,255,255,.8);transform:scale(0);white-space:nowrap;}
+#lifeup-overlay.show #lifeup-text{animation:lifeupTextPop 1.4s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes lifeupTextPop{0%{transform:scale(0) rotate(-8deg)}30%{transform:scale(1.25) rotate(4deg)}50%{transform:scale(1) rotate(0deg)}80%{transform:scale(1) rotate(0deg)}100%{transform:scale(.85) rotate(0deg);opacity:0}}
+.heart-burst{position:absolute;font-size:2.2rem;animation:heartFly 1.3s ease-out forwards;}
+@keyframes heartFly{0%{transform:translate(0,0) scale(.5) rotate(0deg);opacity:1}100%{transform:translate(var(--hx),var(--hy)) scale(1.3) rotate(var(--hr));opacity:0}}
+@keyframes bannerPop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}20%{transform:translate(-50%,-50%) scale(1.1);opacity:1}70%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(-50%,-50%) scale(.8);opacity:0}}
+#ground{position:absolute;bottom:0;left:0;right:0;height:55px;background:linear-gradient(to bottom,#a5d6a7,#81c784);border-radius:50% 50% 0 0/18px 18px 0 0;z-index:5;}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,249,196,.95);z-index:50;gap:16px;padding:20px;}
+.screen-title{font-size:3rem;font-weight:900;color:#e64a19;text-shadow:3px 3px 0 #ffccbc;text-align:center;line-height:1.2;animation:bounce 1s ease infinite alternate;}
+@keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-10px)}}
+.screen-sub{font-size:1.15rem;color:#5d4037;text-align:center;line-height:1.9;}
+.rule-row{display:flex;gap:18px;justify-content:center;align-items:center;flex-wrap:wrap;}
+.rule-card{display:flex;flex-direction:column;align-items:center;gap:4px;background:white;border-radius:18px;padding:12px 16px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:110px;}
+.rule-card.ok{border:3px solid #43a047;}
+.rule-card.ng{border:3px solid #e53935;}
+.rule-items{font-size:1.8rem;display:flex;gap:4px;flex-wrap:wrap;justify-content:center;max-width:140px;}
+.rule-badge{font-size:1.4rem;font-weight:900;border-radius:12px;padding:2px 14px;color:white;}
+.rule-badge.ok{background:#43a047;}
+.rule-badge.ng{background:#e53935;}
+.rule-label{font-size:.85rem;color:#5d4037;font-weight:700;}
+.btn{background:linear-gradient(135deg,#ff7043,#ff5722);color:white;border:none;border-radius:50px;padding:14px 40px;font-size:1.4rem;font-weight:900;font-family:inherit;cursor:pointer;box-shadow:0 6px 18px rgba(255,87,34,.5);}
+.btn:hover{transform:translateY(-3px);}.btn:active{transform:translateY(1px);}
+#result-score{font-size:4.2rem;font-weight:900;color:#ff6f00;text-shadow:3px 3px 0 #ffe082;}
+.result-rank{font-size:1.7rem;font-weight:900;color:#388e3c;background:white;border-radius:18px;padding:8px 26px;box-shadow:0 4px 12px rgba(56,142,60,.3);}
+/* 名前入力 */
+#name-screen input{font-family:'Zen Maru Gothic',sans-serif;font-size:1.6rem;font-weight:900;border:3px solid #ff7043;border-radius:16px;padding:10px 20px;text-align:center;outline:none;width:220px;}
+/* ランキング */
+#ranking-table{width:min(400px,90vw);border-collapse:collapse;}
+#ranking-table th{background:#ff7043;color:white;padding:8px 12px;font-size:1rem;}
+#ranking-table td{padding:8px 12px;font-size:1.05rem;font-weight:700;border-bottom:2px solid #ffe0b2;text-align:center;}
+#ranking-table tr:nth-child(odd) td{background:rgba(255,255,255,.7);}
+#ranking-table tr:nth-child(even) td{background:rgba(255,224,178,.5);}
+.rank-crown td{background:linear-gradient(90deg,#fff9c4,#ffe082) !important;font-size:1.1rem;}
+#hint{position:absolute;bottom:68px;left:50%;transform:translateX(-50%);font-size:.75rem;color:#5d4037;opacity:.5;white-space:nowrap;z-index:6;}
+</style>
+</head>
+<body>
+<div id="gc">
+  <div class="cloud" style="width:110px;height:36px;top:9%;animation-duration:18s;animation-delay:-4s">
+    <div style="position:absolute;width:55px;height:55px;background:white;border-radius:50%;top:-28px;left:18px"></div>
+    <div style="position:absolute;width:40px;height:40px;background:white;border-radius:50%;top:-18px;left:55px"></div>
+  </div>
+  <div class="cloud" style="width:85px;height:28px;top:20%;animation-duration:25s;animation-delay:-11s">
+    <div style="position:absolute;width:42px;height:42px;background:white;border-radius:50%;top:-20px;left:14px"></div>
+  </div>
+  <div class="cloud" style="width:140px;height:42px;top:5%;animation-duration:32s;animation-delay:-20s">
+    <div style="position:absolute;width:65px;height:65px;background:white;border-radius:50%;top:-32px;left:22px"></div>
+    <div style="position:absolute;width:48px;height:48px;background:white;border-radius:50%;top:-22px;left:72px"></div>
+  </div>
+
+  <div id="hud">
+    <div id="score-box">⭐ <span id="score">0</span></div>
+    <div id="combo-box">🔥 <span id="combo">0</span>連続</div>
+    <div id="lives-box"><span id="lives">❤️❤️❤️❤️❤️</span></div>
+    <div id="level-box">🚀 Lv.<span id="level">1</span></div>
+    <button id="bgm-btn" class="hbtn" style="background:#66bb6a;" onclick="toggleBGM()">🔊</button>
+    <button class="hbtn" style="background:#ffa726;" onclick="pauseGame()">⏸️ ポーズ</button>
+    <button class="hbtn" style="background:#78909c;" onclick="retireGame()">🏳️ やめる</button>
+  </div>
+
+  <div id="lvbanner"></div>
+  <div id="lifeup-overlay"><div id="lifeup-text">💖 ライフアップ！ 💖</div></div>
+  <div id="basket">🧺</div>
+  <div id="ground"></div>
+  <div id="hint">← → キー または マウス・タッチで うごかそう！</div>
+
+  <!-- スタート -->
+  <div class="screen" id="start-screen">
+    <div class="screen-title">🍎フルーツ<br>ドロップ🍊</div>
+    <div class="rule-row">
+      <div class="rule-card ok">
+        <div class="rule-badge ok">⭕ OK！</div>
+        <div class="rule-items">🍎🍊🍋🍇🍓🍑</div>
+        <div class="rule-label">くだものを とってね</div>
+      </div>
+      <div class="rule-card ng">
+        <div class="rule-badge ng">✖️ NG！</div>
+        <div class="rule-items">💀💣</div>
+        <div class="rule-label">これは とったらダメ</div>
+      </div>
+    </div>
+    <div class="rule-row">
+      <div class="rule-card ok">
+        <div class="rule-badge ok">💖 かいふく</div>
+        <div class="rule-items" style="font-size:1.3rem;">+❤️</div>
+        <div class="rule-label">3000てんから スタート！<br>かいふくするたびに むずかしくなるよ</div>
+      </div>
+      <div class="rule-card ng">
+        <div class="rule-badge ng">⬇️ レベルダウン</div>
+        <div class="rule-items" style="font-size:1.3rem;">くだものを<br>おとすと…</div>
+        <div class="rule-label">レベルが さがっちゃう！<br>きをつけて！</div>
+      </div>
+    </div>
+    <button class="btn" onclick="startGame()">▶ スタート！</button>
+    <button class="btn" style="background:linear-gradient(135deg,#42a5f5,#1e88e5);font-size:1.1rem;padding:10px 30px;" onclick="showRankingScreen()">🏆 ランキング</button>
+    <button class="btn" id="install-btn" style="display:none;background:linear-gradient(135deg,#26a69a,#00897b);font-size:1.1rem;padding:10px 30px;" onclick="installApp()">📲 ホームに追加</button>
+  </div>
+
+  <!-- 名前入力 -->
+  <div class="screen" id="name-screen" style="display:none">
+    <div class="screen-title" style="font-size:2.2rem;">📝 なまえを いれてね</div>
+    <div id="name-score-display" style="font-size:2rem;font-weight:900;color:#ff6f00;"></div>
+    <input id="name-input" type="text" maxlength="8" placeholder="なまえ" autocomplete="off">
+    <button class="btn" onclick="submitScore()">✅ けってい！</button>
+    <button class="btn" style="background:linear-gradient(135deg,#78909c,#546e7a);font-size:1.1rem;padding:10px 30px;" onclick="skipName()">スキップ</button>
+  </div>
+
+  <!-- リザルト -->
+  <div class="screen" id="result-screen" style="display:none">
+    <div class="screen-title">ゲームおわり！🎉</div>
+    <div id="result-score">0てん</div>
+    <div class="result-rank" id="result-rank"></div>
+    <button class="btn" onclick="startGame()">もういちど！</button>
+    <button class="btn" style="background:linear-gradient(135deg,#42a5f5,#1e88e5);font-size:1.1rem;padding:10px 30px;" onclick="showRankingScreen()">🏆 ランキング</button>
+  </div>
+
+  <!-- ランキング -->
+  <div class="screen" id="ranking-screen" style="display:none">
+    <div class="screen-title" style="font-size:2.4rem;">🏆 ランキング</div>
+    <table id="ranking-table">
+      <thead><tr><th>じゅんい</th><th>なまえ</th><th>スコア</th></tr></thead>
+      <tbody id="ranking-body"></tbody>
+    </table>
+    <button class="btn" onclick="showStart()">🏠 もどる</button>
+  </div>
+
+  <!-- ポーズ画面 -->
+  <div class="screen" id="pause-screen" style="display:none;background:rgba(0,0,0,.55);z-index:60;">
+    <div class="screen-title" style="font-size:2.6rem;color:white;text-shadow:3px 3px 0 #444;">⏸️ ポーズ中</div>
+    <button class="btn" onclick="resumeGame()">▶ つづける</button>
+    <button class="btn" style="background:linear-gradient(135deg,#78909c,#546e7a);font-size:1.1rem;padding:10px 30px;" onclick="quitFromPause()">🏳️ やめる</button>
+  </div>
+</div>
+
+<script>
+const FRUITS=['🍎','🍊','🍋','🍇','🍓','🍑','🍒','🍌','🍉','🥝','🍈','🫐'];
+const BAD=['💀','💣'];
+const LEVELS=[
+  {spawnMs:1000,fallSec:3.5,badRate:.12},
+  {spawnMs:900, fallSec:3.0,badRate:.14},
+  {spawnMs:800, fallSec:2.6,badRate:.16},
+  {spawnMs:700, fallSec:2.2,badRate:.18},
+  {spawnMs:580, fallSec:1.8,badRate:.20},
+  {spawnMs:470, fallSec:1.5,badRate:.22},
+  {spawnMs:380, fallSec:1.2,badRate:.24},
+  {spawnMs:300, fallSec:1.0,badRate:.26},
+];
+const LV_GAP=[400,500,700,1000,1300,1600,2000]; // 各レベルアップに必要な「そこからの加算点数」
+const BASKET_HW=55, ITEM_SIZE=50;
+const MAX_RANK=5;
+const MAX_LIVES=5;
+
+let score=0,lives=MAX_LIVES,lv=1,combo=0,nextLifeAt=3000,lifeRecoverGap=3000,lvProgress=0,paused=false;
+let bx=50,running=false;
+let items=[],spawnTimer=null,rafId=null,lastTime=0;
+
+const gc=document.getElementById('gc');
+const basketEl=document.getElementById('basket');
+const scoreEl=document.getElementById('score');
+const livesEl=document.getElementById('lives');
+const levelEl=document.getElementById('level');
+const levelBox=document.getElementById('level-box');
+const lvbanner=document.getElementById('lvbanner');
+
+// ── 効果音 ──
+let actx=null;
+function getAudioContext(){
+  if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
+  return actx;
+}
+function beep(f1,f2,dur,type='sine',vol=.35){
+  const ctx=getAudioContext();
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.connect(g);g.connect(ctx.destination);o.type=type;
+  const t=ctx.currentTime;
+  o.frequency.setValueAtTime(f1,t);
+  if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+dur*.7);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.start(t);o.stop(t+dur+.05);
+}
+const playCatch=()=>beep(520,900,.18);
+const playMiss=()=>beep(280,80,.3,'sawtooth',.3);
+const playDrop=()=>beep(220,100,.2,'sine',.2);
+
+// ── BGM ──
+let bgmNodes=[],bgmRunning=false,bgmStep=0,bgmNextTime=0,bgmTimer=null;
+const BPM=138,BEAT=60/BPM;
+const PENTA=[523,659,784,880,1047,880,784,659];
+const BASS=[131,196,131,196,165,196,131,196];
+const CHORD=[[523,659,784],[523,659,784],[523,659,784],[523,659,784],[349,440,523],[349,440,523],[392,494,587],[392,494,587]];
+function startBGM(){if(bgmRunning)return;bgmRunning=true;bgmStep=0;bgmNextTime=getAudioContext().currentTime+.05;scheduleBGM();}
+function stopBGM(){bgmRunning=false;clearTimeout(bgmTimer);bgmNodes.forEach(n=>{try{n.stop();}catch(e){}});bgmNodes=[];}
+function scheduleBGM(){
+  if(!bgmRunning)return;
+  while(bgmNextTime<getAudioContext().currentTime+.3){
+    const t=bgmNextTime,s=bgmStep%PENTA.length;
+    pNote(PENTA[s],t,BEAT*.45,'sine',.18);
+    if(s%2===0)pNote(BASS[s],t,BEAT*.8,'triangle',.22);
+    if(s%4===0)CHORD[s].forEach(f=>pNote(f,t,BEAT*1.8,'sine',.06));
+    pNoise(t,.04,.06);if(s%2===0)pNoise(t+BEAT*.5,.03,.05);
+    bgmStep++;bgmNextTime+=BEAT;
+  }
+  bgmTimer=setTimeout(scheduleBGM,100);
+}
+function pNote(freq,t,dur,type,vol){
+  const ctx=getAudioContext();
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.connect(g);g.connect(ctx.destination);o.type=type;o.frequency.value=freq;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.start(t);o.stop(t+dur+.05);
+  bgmNodes.push(o);
+  o.onended=()=>{const i=bgmNodes.indexOf(o);if(i>=0)bgmNodes.splice(i,1);};
+}
+function pNoise(t,dur,vol){
+  const ctx=getAudioContext();
+  const buf=ctx.createBuffer(1,ctx.sampleRate*dur,ctx.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  const src=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter();
+  f.type='highpass';f.frequency.value=6000;src.buffer=buf;
+  src.connect(f);f.connect(g);g.connect(ctx.destination);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  src.start(t);src.stop(t+dur+.02);
+  bgmNodes.push(src);
+  src.onended=()=>{const i=bgmNodes.indexOf(src);if(i>=0)bgmNodes.splice(i,1);};
+}
+function toggleBGM(){
+  const btn=document.getElementById('bgm-btn');
+  const ctx=getAudioContext();
+  if(bgmRunning){stopBGM();btn.textContent='🔇';}else{if(ctx.state==='suspended')ctx.resume();startBGM();btn.textContent='🔊';}
+}
+
+// ── ランキング（localStorage）──
+function loadRanking(){
+  try{return JSON.parse(localStorage.getItem('fruitRanking')||'[]');}catch(e){return[];}
+}
+function saveRanking(list){
+  try{localStorage.setItem('fruitRanking',JSON.stringify(list));}catch(e){}
+}
+function addRanking(name,sc){
+  const list=loadRanking();
+  list.push({name,score:sc,date:new Date().toLocaleDateString('ja-JP')});
+  list.sort((a,b)=>b.score-a.score);
+  const top=list.slice(0,MAX_RANK);
+  saveRanking(top);
+  return top;
+}
+
+// ── 画面表示 ──
+function hideAll(){
+  ['start-screen','name-screen','result-screen','ranking-screen','pause-screen'].forEach(id=>{
+    document.getElementById(id).style.display='none';
+  });
+}
+function showStart(){hideAll();document.getElementById('start-screen').style.display='flex';}
+function showRankingScreen(){
+  hideAll();
+  renderRanking(loadRanking());
+  document.getElementById('ranking-screen').style.display='flex';
+}
+function renderRanking(list){
+  const medals=['🥇','🥈','🥉','4位','5位'];
+  const tbody=document.getElementById('ranking-body');
+  tbody.innerHTML='';
+  if(list.length===0){
+    tbody.innerHTML='<tr><td colspan="3" style="color:#999;font-size:1rem;">まだ きろくがないよ！</td></tr>';
+    return;
+  }
+  list.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    if(i===0)tr.className='rank-crown';
+    const cells=[medals[i]||(i+1+'位'), r.name||'???', r.score+'てん'];
+    cells.forEach(text=>{
+      const td=document.createElement('td');
+      td.textContent=text;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+// ── ゲーム ──
+function startGame(){
+  hideAll();
+  score=0;lives=MAX_LIVES;lv=1;bx=50;items=[];running=true;combo=0;nextLifeAt=3000;lifeRecoverGap=3000;lvProgress=0;paused=false;
+  updateHUD();
+  gc.querySelectorAll('.item,.fx').forEach(e=>e.remove());
+  clearInterval(spawnTimer);cancelAnimationFrame(rafId);
+  startSpawn();
+  lastTime=performance.now();
+  rafId=requestAnimationFrame(loop);
+  const ctx=getAudioContext();if(ctx.state==='suspended')ctx.resume();
+  startBGM();
+}
+function retireGame(){if(running)endGame();}
+
+function pauseGame(){
+  if(!running||paused)return;
+  paused=true;
+  clearInterval(spawnTimer);
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+  stopBGM();
+  document.getElementById('pause-screen').style.display='flex';
+}
+function resumeGame(){
+  if(!running||!paused)return;
+  paused=false;
+  document.getElementById('pause-screen').style.display='none';
+  startSpawn();
+  lastTime=performance.now();
+  if(!rafId)rafId=requestAnimationFrame(loop);
+  const ctx=getAudioContext();if(ctx.state==='suspended')ctx.resume();
+  startBGM();
+}
+function quitFromPause(){
+  document.getElementById('pause-screen').style.display='none';
+  paused=false;
+  if(running)endGame();
+}
+function startSpawn(){
+  clearInterval(spawnTimer);
+  const cfg=LEVELS[Math.min(lv-1,LEVELS.length-1)];
+  spawnTimer=setInterval(spawnItem,cfg.spawnMs);
+}
+function spawnItem(){
+  if(!running||paused)return;
+  const cfg=LEVELS[Math.min(lv-1,LEVELS.length-1)];
+  const isBad=Math.random()<cfg.badRate;
+  const ch=isBad?BAD[Math.floor(Math.random()*BAD.length)]:FRUITS[Math.floor(Math.random()*FRUITS.length)];
+  const el=document.createElement('div');
+  el.className='item';el.textContent=ch;
+  const xPct=4+Math.random()*92;
+  el.style.left=xPct+'%';
+  const totalH=gc.offsetHeight+80;
+  const sv=cfg.fallSec*(0.85+Math.random()*.3);
+  const spd=totalH/(sv*1000);
+  gc.appendChild(el);
+  items.push({el,isBad,xPct,y:-55,spd,caught:false,missed:false});
+}
+
+function loop(now){
+  if(!running||paused){rafId=null;return;}
+  const dt=Math.min(now-lastTime,50);
+  lastTime=now;
+  const keySpd=2.2*(dt/16);
+  if(keys['ArrowLeft']||keys['a']||keys['A'])bx=Math.max(3,bx-keySpd);
+  if(keys['ArrowRight']||keys['d']||keys['D'])bx=Math.min(97,bx+keySpd);
+  basketEl.style.left=bx+'%';
+  const W=gc.offsetWidth,H=gc.offsetHeight;
+  const bxPx=(bx/100)*W;
+  const basketY=H-58-30;
+  const groundY=H-55; // 地面のY座標
+
+  items.forEach(it=>{
+    if(it.caught||it.missed)return;
+    it.y+=it.spd*dt;
+    it.el.style.top=it.y+'px';
+    const cx=(it.xPct/100)*W+ITEM_SIZE/2;
+    const bottom=it.y+ITEM_SIZE;
+
+    // バスケットキャッチ判定
+    if(bottom>=basketY&&bottom<=basketY+60){
+      if(Math.abs(cx-bxPx)<=BASKET_HW+10){
+        it.caught=true;it.el.remove();
+        if(it.isBad)onBadCatch(cx,basketY);
+        else onCatch(cx,basketY,it.el.textContent);
+        return;
+      }
+    }
+    // 地面に落ちた判定
+    if(bottom>=groundY){
+      it.missed=true;it.el.remove();
+      if(!it.isBad)onDrop(cx,groundY-30); // 果物を落としたらライフ減
+    }
+  });
+
+  items=items.filter(it=>!it.caught&&!it.missed);
+  rafId=requestAnimationFrame(loop);
+}
+
+function onCatch(x,y,ch){
+  combo=Math.min(combo+1,10);
+  const pts=combo*10;
+  score+=pts;updateHUD();checkLvUp(pts);checkLifeRecover(x,y);playCatch();
+  const comboText = combo>=10 ? `+${pts} ${ch} (MAX!10連続!)` : combo>1 ? `+${pts} ${ch} (${combo}連続!)` : `+${pts} ${ch}`;
+  showFx(x,y,comboText,'good');
+  basketEl.style.transform='translateX(-50%) scale(1.25)';
+  setTimeout(()=>basketEl.style.transform='translateX(-50%) scale(1)',150);
+}
+function checkLifeRecover(x,y){
+  if(score>=nextLifeAt){
+    lifeRecoverGap+=1000;
+    nextLifeAt+=lifeRecoverGap;
+    if(lives<MAX_LIVES){
+      lives++;
+      updateHUD();
+      setTimeout(()=>showFx(x,y-40,'❤️ かいふく！','good'),200);
+      triggerLifeUp();
+    }
+  }
+}
+function triggerLifeUp(){
+  const overlay=document.getElementById('lifeup-overlay');
+  overlay.classList.remove('show');
+  void overlay.offsetWidth;
+  overlay.classList.add('show');
+  setTimeout(()=>overlay.classList.remove('show'),1400);
+
+  // ハートが画面いっぱいに飛び散る
+  const W=gc.offsetWidth,H=gc.offsetHeight;
+  const cx=W/2, cy=H/2;
+  for(let i=0;i<14;i++){
+    const h=document.createElement('div');
+    h.className='heart-burst';
+    h.textContent=['💖','💗','❤️','💕'][Math.floor(Math.random()*4)];
+    const angle=(Math.PI*2*i)/14 + Math.random()*0.3;
+    const dist=120+Math.random()*180;
+    h.style.left=cx+'px';
+    h.style.top=cy+'px';
+    h.style.setProperty('--hx',(Math.cos(angle)*dist)+'px');
+    h.style.setProperty('--hy',(Math.sin(angle)*dist)+'px');
+    h.style.setProperty('--hr',(Math.random()*360-180)+'deg');
+    h.style.zIndex=41;
+    gc.appendChild(h);
+    setTimeout(()=>h.remove(),1350);
+  }
+
+  // 効果音（華やかなアルペジオ）
+  [659,784,988,1318].forEach((f,i)=>{
+    setTimeout(()=>beep(f,f*1.2,.25,'sine',.3),i*90);
+  });
+}
+function onBadCatch(x,y){
+  lives=Math.max(0,lives-1);combo=0;updateHUD();playMiss();
+  showFx(x,y,'💥 アウト！','bad');
+  flashRed();
+  levelDown();
+  if(lives<=0)setTimeout(endGame,300);
+}
+function onDrop(x,y){
+  lives=Math.max(0,lives-1);combo=0;updateHUD();playDrop();
+  showFx(x,y,'🍂 おとした！','bad');
+  flashRed();
+  levelDown();
+  if(lives<=0)setTimeout(endGame,300);
+}
+function levelDown(){
+  if(lv>1){
+    lv=Math.max(1,lv-1);
+    lvProgress=0; // 内部スコアを0にリセット
+    levelEl.textContent=lv;
+    startSpawn(); // 落下速度・出現頻度を更新
+    lvbanner.textContent='⬇️ レベルダウン…';
+    lvbanner.classList.add('down');
+    lvbanner.classList.remove('show');
+    void lvbanner.offsetWidth;
+    lvbanner.classList.add('show');
+    setTimeout(()=>{
+      lvbanner.classList.remove('show','down');
+    },1300);
+  }
+}
+function flashRed(){
+  gc.style.filter='brightness(1.9)';
+  setTimeout(()=>gc.style.filter='',200);
+}
+function updateHUD(){
+  scoreEl.textContent=score;levelEl.textContent=lv;
+  livesEl.textContent='❤️'.repeat(Math.max(0,lives))+'🖤'.repeat(Math.max(0,MAX_LIVES-lives));
+  const comboBox=document.getElementById('combo-box');
+  const comboEl=document.getElementById('combo');
+  if(combo>=2){
+    comboBox.classList.add('active');
+    comboEl.textContent=combo;
+    comboBox.style.animation='none';
+    void comboBox.offsetWidth;
+    comboBox.style.animation='comboPulse .3s';
+  } else {
+    comboBox.classList.remove('active');
+  }
+}
+function checkLvUp(pts){
+  lvProgress+=pts;
+  // 複数レベル同時アップにも対応（whileループ）
+  while(lv<LEVELS.length && lvProgress>=LV_GAP[lv-1]){
+    lvProgress-=LV_GAP[lv-1]; // 超過分は次のレベルに持ち越し
+    lv++;
+    levelBox.classList.add('up');
+    setTimeout(()=>levelBox.classList.remove('up'),1200);
+    lvbanner.textContent='⬆️ レベル'+lv+'！';
+    lvbanner.classList.remove('show');void lvbanner.offsetWidth;
+    lvbanner.classList.add('show');
+    setTimeout(()=>lvbanner.classList.remove('show'),1300);
+    startSpawn();
+  }
+  updateHUD();
+}
+function showFx(x,y,txt,cls){
+  const el=document.createElement('div');
+  el.className='fx '+cls;el.textContent=txt;
+  el.style.left=(x-40)+'px';el.style.top=(y-20)+'px';
+  gc.appendChild(el);setTimeout(()=>el.remove(),850);
+}
+function endGame(){
+  if(!running)return;
+  running=false;paused=false;clearInterval(spawnTimer);cancelAnimationFrame(rafId);
+  gc.querySelectorAll('.item').forEach(e=>e.remove());
+  stopBGM();
+  // 名前入力画面へ
+  hideAll();
+  document.getElementById('name-score-display').textContent=score+'てん';
+  document.getElementById('name-input').value='';
+  document.getElementById('name-screen').style.display='flex';
+}
+function submitScore(){
+  const name=document.getElementById('name-input').value.trim()||'ゲスト';
+  addRanking(name,score);
+  showResult();
+}
+function skipName(){
+  addRanking('???',score);
+  showResult();
+}
+function showResult(){
+  hideAll();
+  let rank='';
+  if(score>=5500)rank='🏆 チャンピオン！すごすぎる！';
+  else if(score>=2600)rank='🥇 やったね！めちゃ上手！';
+  else if(score>=900)rank='🥈 よくできました！';
+  else rank='🥉 もういちどがんばろう！';
+  document.getElementById('result-score').textContent=score+'てん';
+  document.getElementById('result-rank').textContent=rank;
+  document.getElementById('result-screen').style.display='flex';
+}
+
+// ── 操作 ──
+const keys={};
+document.addEventListener('keydown',e=>{keys[e.key]=true;});
+document.addEventListener('keyup',e=>{keys[e.key]=false;});
+gc.addEventListener('mousemove',e=>{
+  if(!running||paused)return;
+  const r=gc.getBoundingClientRect();
+  bx=Math.max(3,Math.min(97,((e.clientX-r.left)/r.width)*100));
+  basketEl.style.left=bx+'%';
+});
+gc.addEventListener('touchmove',e=>{
+  if(!running||paused)return;
+  e.preventDefault();
+  const r=gc.getBoundingClientRect();
+  bx=Math.max(3,Math.min(97,((e.touches[0].clientX-r.left)/r.width)*100));
+  basketEl.style.left=bx+'%';
+},{passive:false});
+
+// ── バックグラウンド対策：最小化・タブ切替時に自動ポーズ ──
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && running && !paused) {
+    pauseGame();
+  }
+});
+window.addEventListener('pagehide', () => {
+  if (running && !paused) pauseGame();
+});
+window.addEventListener('blur', () => {
+  if (running && !paused) pauseGame();
+});
+</script>
+<script>
+// PWA: Service Worker登録（オフライン対応・ホーム画面追加対応）
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').then(reg => {
+      // 新しいService Workerが見つかったら自動で最新化
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          // installing→activated の完全な遷移を確認してからリロード
+          // （既存SWのactivatedイベントで誤ってリロードされるのを防ぐ）
+          if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(()=>{});
+  });
+}
+
+// PWA: インストール体験のカスタマイズ（beforeinstallpromptを捕まえて独自ボタンで案内）
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'inline-block';
+});
+function installApp() {
+  const btn = document.getElementById('install-btn');
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.finally(() => {
+    deferredInstallPrompt = null;
+    if (btn) btn.style.display = 'none';
+  });
+}
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'none';
+});
+</script>
+</body>
+</html>

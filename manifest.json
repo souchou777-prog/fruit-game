@@ -1,0 +1,58 @@
+{
+  "id": "./index.html",
+  "name": "フルーツドロップ",
+  "short_name": "フルーツドロップ",
+  "description": "おちてくる くだものを かごでキャッチするゲーム",
+  "start_url": "./index.html",
+  "scope": "./",
+  "lang": "ja",
+  "dir": "ltr",
+  "display": "standalone",
+  "display_override": ["standalone", "browser"],
+  "background_color": "#fff9c4",
+  "theme_color": "#ff7043",
+  "orientation": "portrait",
+  "categories": ["games", "entertainment", "kids"],
+  "screenshots": [
+    {
+      "src": "screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "スタート画面(スマホ表示)"
+    },
+    {
+      "src": "screenshot-wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "スタート画面(PC表示)"
+    }
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
